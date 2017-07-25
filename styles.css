@@ -1,0 +1,51 @@
+@keyframes ColorTransition {
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+
+html {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+  background: linear-gradient(270deg, #00992e, #ff6347, #009dcc);
+  background-size: 600% 600%;
+  animation: ColorTransition 30s ease infinite;
+}
+
+body {
+  margin: 0
+}
+
+#canvas {
+  margin: 0;
+  cursor: pointer;
+}
+
+.controls {
+  display: flex;
+  position: fixed;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.control {
+  flex: 1;
+  border: 0;
+  color: #ccc;
+  font-size: 16px;
+  background-color: rgba(3, 3, 3, .3);
+  margin: 0;
+  margin-top: -20px;
+  padding: 16px;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0;
+  transition: 500ms;
+}
+
+.control:hover {
+  opacity: 1;
+  transform: translateY(20px)
+}
