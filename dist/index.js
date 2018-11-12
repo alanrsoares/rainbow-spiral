@@ -1,27 +1,26 @@
-function startApp() {
+window.startApp = () => {
   const state = {
     skew: 0.5,
-    step: 1E-5,
+    step: 1e-5,
     frame: null,
-    color: '#333',
+    color: "#333",
     reverse: false,
     playing: false
   };
 
   function getCanvasSize() {
     const body = document.body;
-    const html = document.documentElement;
-    const keys = ['scroll', 'offset', 'client'];
+    const keys = ["scroll", "offset", "client"];
 
-    const maxDimension = dimension => Math.max(...keys.map(key => body[key + dimension]));
+    const maxDimension = dimension => Math.max(...keys.map(key => key + dimension).filter(attribute => !!body[attribute]).map(attribute => body[attribute]));
 
-    return ['Height', 'Width'].map(maxDimension);
+    return ["Height", "Width"].map(maxDimension);
   }
 
   function makeCanvas([height, width]) {
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
 
-    canvas.id = 'canvas';
+    canvas.id = "canvas";
     canvas.width = width;
     canvas.height = height;
 
@@ -31,12 +30,12 @@ function startApp() {
   const canvas = makeCanvas(getCanvasSize());
   canvas.style = `width: ${canvas.width}px; height: ${canvas.height}px`;
 
-  const container = document.getElementById('canvas-container');
+  const container = document.getElementById("canvas-container");
 
   container.style = `width: ${canvas.width}px; height: ${canvas.height}px`;
   container.appendChild(canvas);
 
-  state.ctx = canvas.getContext('2d');
+  state.ctx = canvas.getContext("2d");
   state.center = {
     x: canvas.width / 2,
     y: canvas.height / 2
@@ -91,4 +90,4 @@ function startApp() {
 
   // start itself
   window.togglePlay();
-}
+};
