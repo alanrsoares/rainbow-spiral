@@ -91,3 +91,5 @@ window.startApp = () => {
   // start itself
   window.togglePlay()
 }
+
+window.startApp()
