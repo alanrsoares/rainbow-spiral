@@ -19,22 +19,17 @@ window.startApp = () => {
 
   function makeCanvas([height, width]) {
     const canvas = document.createElement("canvas");
-
     canvas.id = "canvas";
     canvas.width = width;
     canvas.height = height;
-
     return canvas;
   }
 
   const canvas = makeCanvas(getCanvasSize());
   canvas.style = `width: ${canvas.width}px; height: ${canvas.height}px`;
-
   const container = document.getElementById("canvas-container");
-
   container.style = `width: ${canvas.width}px; height: ${canvas.height}px`;
   container.appendChild(canvas);
-
   state.ctx = canvas.getContext("2d");
   state.center = {
     x: canvas.width / 2,
@@ -45,17 +40,17 @@ window.startApp = () => {
     state.ctx.clearRect(0, 0, canvas.width, canvas.height);
     state.ctx.moveTo(state.center.x, state.center.y);
     state.ctx.beginPath();
-
     const maxIterations = Math.max(canvas.width, canvas.height) * 2;
 
     for (let i = 0; i < maxIterations; i++) {
       const angle = state.skew * i;
+
       const pos = (fn, x) => x + (1 + 1 * angle) * fn(angle);
+
       const point = {
         x: pos(Math.cos, state.center.x),
         y: pos(Math.sin, state.center.y)
       };
-
       state.ctx.lineTo(point.x, point.y);
     }
 
@@ -86,8 +81,8 @@ window.startApp = () => {
 
   window.flip = () => {
     state.reverse = !state.reverse;
-  };
+  }; // start itself
 
-  // start itself
+
   window.togglePlay();
 };
