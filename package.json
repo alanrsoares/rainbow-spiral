@@ -34,6 +34,6 @@
     "babel-preset-react": "^6.24.1",
     "babel-preset-stage-3": "^6.24.1",
     "http-server": "^0.11.1",
-    "standard": "^10.0.2"
+    "standard": "^13.0.1"
   }
 }
