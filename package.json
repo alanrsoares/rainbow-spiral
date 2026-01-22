@@ -10,7 +10,7 @@
     "start": "bun run serve.ts",
     "format": "biome format --write src",
     "lint": "biome check src",
-    "lint-fix": "biome check --write src",
+    "lint:fix": "biome check --write src",
     "predeploy": "bun run build",
     "deploy": "gh-pages -d ."
   },

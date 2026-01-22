@@ -1,6 +1,6 @@
 import * as twgl from "twgl.js";
-import { vsSource } from "./shaders/vertex";
 import { fsSource } from "./shaders/fragment";
+import { vsSource } from "./shaders/vertex";
 import type { State } from "./state";
 
 export class Renderer {

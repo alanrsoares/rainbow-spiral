@@ -2,8 +2,9 @@ import type { State } from "./state";
 
 export function setupInputListeners(canvas: HTMLCanvasElement, state: State) {
 	function updateMouse(x: number, y: number) {
-		state.mouse.x = (x / canvas.width) * 2 - 1;
-		state.mouse.y = -((y / canvas.height) * 2 - 1);
+		// Update target, not the current mouse state directly
+		state.targetMouse.x = (x / canvas.width) * 2 - 1;
+		state.targetMouse.y = -((y / canvas.height) * 2 - 1);
 	}
 
 	window.addEventListener("mousemove", (e) =>

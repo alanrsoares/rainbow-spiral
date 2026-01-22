@@ -1,4 +1,4 @@
-import { setupCanvas, handleResize } from "./canvas";
+import { handleResize, setupCanvas } from "./canvas";
 import { setupInputListeners } from "./input";
 import { Renderer } from "./renderer";
 import { state } from "./state";
@@ -9,6 +9,11 @@ declare global {
 		togglePlay: () => void;
 		flip: () => void;
 	}
+}
+
+// Linear interpolation function
+function lerp(start: number, end: number, t: number) {
+	return start * (1 - t) + end * t;
 }
 
 window.startApp = () => {
@@ -34,6 +39,12 @@ window.startApp = () => {
 	}
 
 	function play(time: number) {
+		// Smooth mouse movement
+		// Factor 0.1 gives a nice weighty feel. Adjust higher for faster response.
+		const smoothing = 0.05;
+		state.mouse.x = lerp(state.mouse.x, state.targetMouse.x, smoothing);
+		state.mouse.y = lerp(state.mouse.y, state.targetMouse.y, smoothing);
+
 		if (state.playing) {
 			renderer.draw(time, state);
 		}
