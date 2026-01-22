@@ -1,189 +1,233 @@
 import * as twgl from "twgl.js";
 
 declare global {
-  interface Window {
-    startApp: () => void;
-    togglePlay: () => void;
-    flip: () => void;
-  }
+	interface Window {
+		startApp: () => void;
+		togglePlay: () => void;
+		flip: () => void;
+	}
 }
 
 interface State {
-  skew: number;
-  step: number;
-  frame: number | null;
-  color: number[];
-  reverse: boolean;
-  playing: boolean;
+	speed: number;
+	reverse: boolean;
+	playing: boolean;
+	mouse: { x: number; y: number }; // Normalized -1 to 1
 }
 
 window.startApp = () => {
-  const state: State = {
-    skew: 0.5,
-    step: 1e-5,
-    frame: null,
-    color: [0.2, 0.2, 0.2, 1.0],
-    reverse: false,
-    playing: false,
-  };
+	const state: State = {
+		speed: 0.5,
+		reverse: false,
+		playing: true,
+		mouse: { x: 0, y: 0 },
+	};
 
-  function getCanvasSize(): [number, number] {
-    const body = document.body;
-    const keys = ["scroll", "offset", "client"] as const;
+	function getCanvasSize(): [number, number] {
+		const body = document.body;
+		const keys = ["scroll", "offset", "client"] as const;
 
-    const maxDimension = (dimension: string) =>
-      Math.max(
-        ...keys
-          .map((key) => key + dimension)
-          .filter(
-            (attribute) =>
-              !!(body as unknown as Record<string, number>)[attribute],
-          )
-          .map(
-            (attribute) =>
-              (body as unknown as Record<string, number>)[attribute],
-          ),
-      );
+		const maxDimension = (dimension: string) =>
+			Math.max(
+				...keys
+					.map((key) => key + dimension)
+					.filter(
+						(attribute) =>
+							!!(body as unknown as Record<string, number>)[attribute],
+					)
+					.map(
+						(attribute) =>
+							(body as unknown as Record<string, number>)[attribute],
+					),
+			);
 
-    return [maxDimension("Height"), maxDimension("Width")];
-  }
+		return [maxDimension("Height"), maxDimension("Width")];
+	}
 
-  function makeCanvas([height, width]: [number, number]) {
-    const canvas = document.createElement("canvas");
+	function makeCanvas([height, width]: [number, number]) {
+		const canvas = document.createElement("canvas");
+		canvas.id = "canvas";
+		canvas.width = width;
+		canvas.height = height;
+		return canvas;
+	}
 
-    canvas.id = "canvas";
-    canvas.width = width;
-    canvas.height = height;
+	const canvas = makeCanvas(getCanvasSize());
+	const container = document.getElementById("canvas-container");
+	if (!container) return;
 
-    return canvas;
-  }
+	container.appendChild(canvas);
 
-  const canvas = makeCanvas(getCanvasSize());
-  canvas.style.width = `${canvas.width}px`;
-  canvas.style.height = `${canvas.height}px`;
+	function resize() {
+		const [h, w] = getCanvasSize();
+		canvas.width = w;
+		canvas.height = h;
+		canvas.style.width = `${w}px`;
+		canvas.style.height = `${h}px`;
+		container!.style.width = `${w}px`;
+		container!.style.height = `${h}px`;
+	}
+	window.addEventListener("resize", resize);
+	resize();
 
-  const container = document.getElementById("canvas-container");
+	function updateMouse(x: number, y: number) {
+		state.mouse.x = (x / canvas.width) * 2 - 1;
+		state.mouse.y = -((y / canvas.height) * 2 - 1);
+	}
 
-  if (!container) {
-    console.error("Canvas container not found");
-    return;
-  }
+	window.addEventListener("mousemove", (e) =>
+		updateMouse(e.clientX, e.clientY),
+	);
+	window.addEventListener(
+		"touchmove",
+		(e) => {
+			e.preventDefault();
+			const touch = e.touches[0];
+			updateMouse(touch.clientX, touch.clientY);
+		},
+		{ passive: false },
+	);
 
-  container.style.width = `${canvas.width}px`;
-  container.style.height = `${canvas.height}px`;
-  container.appendChild(canvas);
+	const gl = canvas.getContext("webgl");
+	if (!gl) {
+		console.error("WebGL not supported");
+		return;
+	}
 
-  const gl = canvas.getContext("webgl");
-  if (!gl) {
-    console.error("WebGL not supported");
-    return;
-  }
+	const vsSource = `
+    attribute vec4 position;
+    void main() {
+      gl_Position = position;
+    }
+  `;
 
-  // Use TWGL for WebGL boilerplate
-  const vsSource = `
-    attribute float a_index;
+  // Seamless Acid Tunnel
+	const fsSource = `
+    precision highp float;
     uniform vec2 u_resolution;
-    uniform vec2 u_center;
-    uniform float u_skew;
+    uniform float u_time;
+    uniform vec2 u_mouse;
+    uniform float u_speed;
+
+    vec3 palette(float t) {
+      vec3 a = vec3(0.5, 0.5, 0.5);
+      vec3 b = vec3(0.5, 0.5, 0.5);
+      vec3 c = vec3(1.0, 1.0, 1.0);
+      vec3 d = vec3(0.263, 0.416, 0.557); 
+      return a + b * cos(6.28318 * (c * t + d));
+    }
 
     void main() {
-      float angle = u_skew * a_index;
-      float r = 1.0 + angle;
-      vec2 pos = vec2(r * cos(angle), r * sin(angle));
+      vec2 uv = (gl_FragCoord.xy - u_resolution.xy * 0.5) / min(u_resolution.x, u_resolution.y);
+      uv -= u_mouse * 0.3;
+
+      vec3 finalColor = vec3(0.0);
       
-      // Add center offset
-      vec2 p = u_center + pos;
+      vec2 offsets[3];
+      offsets[0] = vec2(0.0, 0.0);       
+      offsets[1] = vec2(0.003, 0.003);   
+      offsets[2] = vec2(-0.003, -0.003); 
 
-      // Convert to clipspace
-      vec2 zeroToOne = p / u_resolution;
-      vec2 zeroToTwo = zeroToOne * 2.0;
-      vec2 clipSpace = zeroToTwo - 1.0;
+      for (int i = 0; i < 3; i++) {
+        vec2 p = uv + offsets[i] * (1.0 + length(uv) * 2.0);
 
-      // Flip Y because WebGL 0,0 is bottom left, Canvas top left
-      gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+        float r = length(p);
+        float a = atan(p.y, p.x); // Returns -PI to PI
+
+        // FIX: Ensure distortion is periodic
+        // Use sine of the angle itself, or multiply angle by integer
+        float distortion = sin(r * 8.0 - u_time * 1.5);
+        a += distortion * 0.2;
+
+        float z = 1.0 / r + u_time * u_speed;
+        
+        // --- SEAMLESS PATTERN LOGIC ---
+        // Instead of mapping to 0-1 and guessing, we use the angle directly.
+        // a is -PI to PI.
+        // sin(a * N) is perfect if N is integer.
+        
+        float pattern = 0.0;
+        
+        // Layer 1: Base flow (Spiral arms)
+        // 4.0 arms. Adding z creates the spiral twist.
+        pattern += sin(a * 4.0 + z * 2.0 + u_time) * 1.0;
+        
+        // Layer 2: Rings/Ripples down the tunnel
+        pattern += sin(z * 4.0 - u_time * 0.5) * 1.0;
+        
+        // Layer 3: Interference
+        pattern += sin(a * 10.0 + z * 10.0 + u_time * 3.0) * 0.5;
+
+        // Electric Lines
+        // Use 'a' directly for angular component
+        // 6.0 must be integer to match seamlessly at PI/-PI
+        float electricity = 0.02 / abs(sin(z * 10.0 + a * 6.0 + u_time * 4.0));
+        
+        vec3 col = palette(pattern * 0.2 + z * 0.1 + u_time * 0.2);
+        
+        col += vec3(electricity) * vec3(0.6, 0.8, 1.0);
+
+        float fog = smoothstep(0.0, 0.6, r);
+        col *= fog;
+
+        float coreGlow = 0.05 / (r + 0.05);
+        col += vec3(coreGlow) * palette(u_time);
+
+        if (i == 0) finalColor.r = col.r;
+        if (i == 1) finalColor.g = col.g;
+        if (i == 2) finalColor.b = col.b;
+      }
+      
+      finalColor = pow(finalColor, vec3(1.2));
+
+      gl_FragColor = vec4(finalColor, 1.0);
     }
   `;
 
-  const fsSource = `
-    precision mediump float;
-    uniform vec4 u_color;
-    void main() {
-      gl_FragColor = u_color;
-    }
-  `;
+	const programInfo = twgl.createProgramInfo(gl, [vsSource, fsSource]);
 
-  // TWGL: Create Program Info
-  const programInfo = twgl.createProgramInfo(gl, [vsSource, fsSource]);
+	const arrays = {
+		position: {
+			numComponents: 2,
+			data: [-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1],
+		},
+	};
+	const bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
 
-  // TWGL: Create Buffer Info
-  const MAX_POINTS = 100000;
-  const indices = new Float32Array(MAX_POINTS);
-  for (let i = 0; i < MAX_POINTS; i++) {
-    indices[i] = i;
-  }
+	function draw(time: number) {
+		if (!gl) return;
 
-  const arrays = {
-    a_index: { numComponents: 1, data: indices },
-  };
-  const bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
+		twgl.resizeCanvasToDisplaySize(gl.canvas as HTMLCanvasElement);
+		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-  function draw() {
-    // Check if gl is null (already checked above, but good for TS inference if separated)
-    if (!gl) return;
+		const uniforms = {
+			u_resolution: [gl.canvas.width, gl.canvas.height],
+			u_time: time * 0.001,
+			u_mouse: [state.mouse.x, state.mouse.y],
+			u_speed: state.reverse ? -state.speed : state.speed,
+		};
 
-    twgl.resizeCanvasToDisplaySize(gl.canvas as HTMLCanvasElement);
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+		gl.useProgram(programInfo.program);
+		twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
+		twgl.setUniforms(programInfo, uniforms);
 
-    // Clear handled manually or by twgl if desired, but manual is fine here
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+		twgl.drawBufferInfo(gl, bufferInfo);
+	}
 
-    const uniforms = {
-      u_resolution: [gl.canvas.width, gl.canvas.height],
-      u_center: [gl.canvas.width / 2, gl.canvas.height / 2],
-      u_skew: state.skew,
-      u_color: state.color,
-    };
+	function play(time: number) {
+		if (state.playing) {
+			draw(time);
+		}
+		window.requestAnimationFrame(play);
+	}
 
-    gl.useProgram(programInfo.program);
-    twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
-    twgl.setUniforms(programInfo, uniforms);
+	window.togglePlay = () => {
+		state.playing = !state.playing;
+	};
 
-    const maxIterations = Math.floor(
-      Math.max(gl.canvas.width, gl.canvas.height) * 2,
-    );
-    const count = Math.min(maxIterations, MAX_POINTS);
+	window.flip = () => {
+		state.reverse = !state.reverse;
+	};
 
-    twgl.drawBufferInfo(gl, bufferInfo, gl.LINE_STRIP, count);
-  }
-
-  function stop() {
-    if (state.frame !== null) {
-      window.cancelAnimationFrame(state.frame);
-      state.frame = null;
-    }
-  }
-
-  function play() {
-    draw();
-    state.skew += state.step * (state.reverse ? -1 : 1);
-    state.frame = window.requestAnimationFrame(play);
-  }
-
-  window.togglePlay = () => {
-    if (state.playing) {
-      state.playing = false;
-      stop();
-    } else {
-      state.playing = true;
-      play();
-    }
-  };
-
-  window.flip = () => {
-    state.reverse = !state.reverse;
-  };
-
-  // start itself
-  window.togglePlay();
+	window.requestAnimationFrame(play);
 };

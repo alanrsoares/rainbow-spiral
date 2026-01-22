@@ -2736,12 +2736,10 @@ function resizeCanvasToDisplaySize(canvas, multiplier) {
 // src/index.ts
 window.startApp = () => {
   const state = {
-    skew: 0.5,
-    step: 0.00001,
-    frame: null,
-    color: [0.2, 0.2, 0.2, 1],
+    speed: 0.5,
     reverse: false,
-    playing: false
+    playing: true,
+    mouse: { x: 0, y: 0 }
   };
   function getCanvasSize() {
     const body = document.body;
@@ -2757,103 +2755,158 @@ window.startApp = () => {
     return canvas2;
   }
   const canvas = makeCanvas(getCanvasSize());
-  canvas.style.width = `${canvas.width}px`;
-  canvas.style.height = `${canvas.height}px`;
   const container = document.getElementById("canvas-container");
-  if (!container) {
-    console.error("Canvas container not found");
+  if (!container)
     return;
-  }
-  container.style.width = `${canvas.width}px`;
-  container.style.height = `${canvas.height}px`;
   container.appendChild(canvas);
+  function resize() {
+    const [h, w] = getCanvasSize();
+    canvas.width = w;
+    canvas.height = h;
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    container.style.width = `${w}px`;
+    container.style.height = `${h}px`;
+  }
+  window.addEventListener("resize", resize);
+  resize();
+  function updateMouse(x, y) {
+    state.mouse.x = x / canvas.width * 2 - 1;
+    state.mouse.y = -(y / canvas.height * 2 - 1);
+  }
+  window.addEventListener("mousemove", (e) => updateMouse(e.clientX, e.clientY));
+  window.addEventListener("touchmove", (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    updateMouse(touch.clientX, touch.clientY);
+  }, { passive: false });
   const gl = canvas.getContext("webgl");
   if (!gl) {
     console.error("WebGL not supported");
     return;
   }
   const vsSource = `
-    attribute float a_index;
-    uniform vec2 u_resolution;
-    uniform vec2 u_center;
-    uniform float u_skew;
-
+    attribute vec4 position;
     void main() {
-      float angle = u_skew * a_index;
-      float r = 1.0 + angle;
-      vec2 pos = vec2(r * cos(angle), r * sin(angle));
-      
-      // Add center offset
-      vec2 p = u_center + pos;
-
-      // Convert to clipspace
-      vec2 zeroToOne = p / u_resolution;
-      vec2 zeroToTwo = zeroToOne * 2.0;
-      vec2 clipSpace = zeroToTwo - 1.0;
-
-      // Flip Y because WebGL 0,0 is bottom left, Canvas top left
-      gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+      gl_Position = position;
     }
   `;
   const fsSource = `
-    precision mediump float;
-    uniform vec4 u_color;
+    precision highp float;
+    uniform vec2 u_resolution;
+    uniform float u_time;
+    uniform vec2 u_mouse;
+    uniform float u_speed;
+
+    vec3 palette(float t) {
+      vec3 a = vec3(0.5, 0.5, 0.5);
+      vec3 b = vec3(0.5, 0.5, 0.5);
+      vec3 c = vec3(1.0, 1.0, 1.0);
+      vec3 d = vec3(0.263, 0.416, 0.557); 
+      return a + b * cos(6.28318 * (c * t + d));
+    }
+
     void main() {
-      gl_FragColor = u_color;
+      vec2 uv = (gl_FragCoord.xy - u_resolution.xy * 0.5) / min(u_resolution.x, u_resolution.y);
+      uv -= u_mouse * 0.3;
+
+      vec3 finalColor = vec3(0.0);
+      
+      vec2 offsets[3];
+      offsets[0] = vec2(0.0, 0.0);       
+      offsets[1] = vec2(0.003, 0.003);   
+      offsets[2] = vec2(-0.003, -0.003); 
+
+      for (int i = 0; i < 3; i++) {
+        vec2 p = uv + offsets[i] * (1.0 + length(uv) * 2.0);
+
+        float r = length(p);
+        float a = atan(p.y, p.x); // Returns -PI to PI
+
+        // FIX: Ensure distortion is periodic
+        // Use sine of the angle itself, or multiply angle by integer
+        float distortion = sin(r * 8.0 - u_time * 1.5);
+        a += distortion * 0.2;
+
+        float z = 1.0 / r + u_time * u_speed;
+        
+        // --- SEAMLESS PATTERN LOGIC ---
+        // Instead of mapping to 0-1 and guessing, we use the angle directly.
+        // a is -PI to PI.
+        // sin(a * N) is perfect if N is integer.
+        
+        float pattern = 0.0;
+        
+        // Layer 1: Base flow (Spiral arms)
+        // 4.0 arms. Adding z creates the spiral twist.
+        pattern += sin(a * 4.0 + z * 2.0 + u_time) * 1.0;
+        
+        // Layer 2: Rings/Ripples down the tunnel
+        pattern += sin(z * 4.0 - u_time * 0.5) * 1.0;
+        
+        // Layer 3: Interference
+        pattern += sin(a * 10.0 + z * 10.0 + u_time * 3.0) * 0.5;
+
+        // Electric Lines
+        // Use 'a' directly for angular component
+        // 6.0 must be integer to match seamlessly at PI/-PI
+        float electricity = 0.02 / abs(sin(z * 10.0 + a * 6.0 + u_time * 4.0));
+        
+        vec3 col = palette(pattern * 0.2 + z * 0.1 + u_time * 0.2);
+        
+        col += vec3(electricity) * vec3(0.6, 0.8, 1.0);
+
+        float fog = smoothstep(0.0, 0.6, r);
+        col *= fog;
+
+        float coreGlow = 0.05 / (r + 0.05);
+        col += vec3(coreGlow) * palette(u_time);
+
+        if (i == 0) finalColor.r = col.r;
+        if (i == 1) finalColor.g = col.g;
+        if (i == 2) finalColor.b = col.b;
+      }
+      
+      finalColor = pow(finalColor, vec3(1.2));
+
+      gl_FragColor = vec4(finalColor, 1.0);
     }
   `;
   const programInfo = createProgramInfo(gl, [vsSource, fsSource]);
-  const MAX_POINTS = 1e5;
-  const indices = new Float32Array(MAX_POINTS);
-  for (let i = 0;i < MAX_POINTS; i++) {
-    indices[i] = i;
-  }
   const arrays = {
-    a_index: { numComponents: 1, data: indices }
+    position: {
+      numComponents: 2,
+      data: [-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]
+    }
   };
   const bufferInfo = createBufferInfoFromArrays(gl, arrays);
-  function draw() {
+  function draw(time) {
     if (!gl)
       return;
     resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
     const uniforms = {
       u_resolution: [gl.canvas.width, gl.canvas.height],
-      u_center: [gl.canvas.width / 2, gl.canvas.height / 2],
-      u_skew: state.skew,
-      u_color: state.color
+      u_time: time * 0.001,
+      u_mouse: [state.mouse.x, state.mouse.y],
+      u_speed: state.reverse ? -state.speed : state.speed
     };
     gl.useProgram(programInfo.program);
     setBuffersAndAttributes(gl, programInfo, bufferInfo);
     setUniforms(programInfo, uniforms);
-    const maxIterations = Math.floor(Math.max(gl.canvas.width, gl.canvas.height) * 2);
-    const count = Math.min(maxIterations, MAX_POINTS);
-    drawBufferInfo(gl, bufferInfo, gl.LINE_STRIP, count);
+    drawBufferInfo(gl, bufferInfo);
   }
-  function stop() {
-    if (state.frame !== null) {
-      window.cancelAnimationFrame(state.frame);
-      state.frame = null;
+  function play(time) {
+    if (state.playing) {
+      draw(time);
     }
-  }
-  function play() {
-    draw();
-    state.skew += state.step * (state.reverse ? -1 : 1);
-    state.frame = window.requestAnimationFrame(play);
+    window.requestAnimationFrame(play);
   }
   window.togglePlay = () => {
-    if (state.playing) {
-      state.playing = false;
-      stop();
-    } else {
-      state.playing = true;
-      play();
-    }
+    state.playing = !state.playing;
   };
   window.flip = () => {
     state.reverse = !state.reverse;
   };
-  window.togglePlay();
+  window.requestAnimationFrame(play);
 };
