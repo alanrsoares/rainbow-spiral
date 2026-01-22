@@ -12,26 +12,26 @@ declare global {
 }
 
 window.startApp = () => {
-    const canvas = setupCanvas("canvas-container");
-    if (!canvas) {
-        console.error("Failed to set up canvas");
-        return;
-    }
-    
-    const container = document.getElementById("canvas-container");
-    if (container) {
-         handleResize(canvas, container);
-    }
+	const canvas = setupCanvas("canvas-container");
+	if (!canvas) {
+		console.error("Failed to set up canvas");
+		return;
+	}
 
-    setupInputListeners(canvas, state);
+	const container = document.getElementById("canvas-container");
+	if (container) {
+		handleResize(canvas, container);
+	}
 
-    let renderer: Renderer;
-    try {
-        renderer = new Renderer(canvas);
-    } catch (e) {
-        console.error(e);
-        return;
-    }
+	setupInputListeners(canvas, state);
+
+	let renderer: Renderer;
+	try {
+		renderer = new Renderer(canvas);
+	} catch (e) {
+		console.error(e);
+		return;
+	}
 
 	function play(time: number) {
 		if (state.playing) {

@@ -11,8 +11,7 @@ export function getCanvasSize(): [number, number] {
 						!!(body as unknown as Record<string, number>)[attribute],
 				)
 				.map(
-					(attribute) =>
-						(body as unknown as Record<string, number>)[attribute],
+					(attribute) => (body as unknown as Record<string, number>)[attribute],
 				),
 		);
 
@@ -39,7 +38,10 @@ export function setupCanvas(containerId: string): HTMLCanvasElement | null {
 	return canvas;
 }
 
-export function handleResize(canvas: HTMLCanvasElement, container: HTMLElement) {
+export function handleResize(
+	canvas: HTMLCanvasElement,
+	container: HTMLElement,
+) {
 	const resize = () => {
 		const [h, w] = getCanvasSize();
 		canvas.width = w;
