@@ -1,3 +1,7 @@
+/**
+ * Get the size of the canvas
+ * @returns The size of the canvas
+ */
 export function getCanvasSize(): [number, number] {
 	const body = document.body;
 	const keys = ["scroll", "offset", "client"] as const;
@@ -18,6 +22,11 @@ export function getCanvasSize(): [number, number] {
 	return [maxDimension("Height"), maxDimension("Width")];
 }
 
+/**
+ * Setup the canvas
+ * @param containerId - The id of the container
+ * @returns The canvas element
+ */
 export function setupCanvas(containerId: string): HTMLCanvasElement | null {
 	const container = document.getElementById(containerId);
 	if (!container) return null;
@@ -38,6 +47,12 @@ export function setupCanvas(containerId: string): HTMLCanvasElement | null {
 	return canvas;
 }
 
+/**
+ * Handle the resize of the canvas
+ * @param canvas - The canvas element
+ * @param container - The container element
+ * @returns The resize function
+ */
 export function handleResize(
 	canvas: HTMLCanvasElement,
 	container: HTMLElement,

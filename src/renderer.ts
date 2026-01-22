@@ -3,6 +3,10 @@ import { fsSource } from "./shaders/fragment";
 import { vsSource } from "./shaders/vertex";
 import type { State } from "./state";
 
+/**
+ * Renderer class
+ * @param canvas - The canvas element
+ */
 export class Renderer {
 	gl: WebGLRenderingContext;
 	programInfo: twgl.ProgramInfo;
@@ -26,6 +30,11 @@ export class Renderer {
 		this.bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
 	}
 
+	/**
+	 * Draw the scene
+	 * @param time - The time in milliseconds
+	 * @param state - The state of the application
+	 */
 	draw(time: number, state: State) {
 		const gl = this.gl;
 		twgl.resizeCanvasToDisplaySize(gl.canvas as HTMLCanvasElement);

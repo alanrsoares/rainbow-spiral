@@ -5,11 +5,8 @@ import { state } from "./state";
 import { lerp } from "./utils";
 
 declare global {
-	interface Window {
-		startApp: () => void;
-		togglePlay: () => void;
-		flip: () => void;
-	}
+	interface Window
+		extends Record<"startApp" | "togglePlay" | "flip", () => void> {}
 }
 
 window.startApp = () => {

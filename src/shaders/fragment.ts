@@ -1,3 +1,6 @@
+/**
+ * Fragment shader source code
+ */
 export const fsSource = `
     precision highp float;
     uniform vec2 u_resolution;
