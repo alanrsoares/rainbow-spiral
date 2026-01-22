@@ -2,6 +2,7 @@ import { handleResize, setupCanvas } from "./canvas";
 import { setupInputListeners } from "./input";
 import { Renderer } from "./renderer";
 import { state } from "./state";
+import { lerp } from "./utils";
 
 declare global {
 	interface Window {
@@ -9,11 +10,6 @@ declare global {
 		togglePlay: () => void;
 		flip: () => void;
 	}
-}
-
-// Linear interpolation function
-function lerp(start: number, end: number, t: number) {
-	return start * (1 - t) + end * t;
 }
 
 window.startApp = () => {
