@@ -6,7 +6,7 @@
   "homepage": "https://alanrsoares.github.io/rainbow-spiral",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "rm -rf dist && bun build src/index.ts --outdir dist",
+    "build": "rm -rf dist && bun run build.ts",
     "start": "bun run serve.ts",
     "format": "biome format --write src",
     "lint": "biome check src",
