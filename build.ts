@@ -1,6 +1,7 @@
 async function build() {
+  console.log("[build] starting...");
 
-  return Bun.build({
+  await Bun.build({
     entrypoints: ["src/index.ts"],
     outdir: "dist",
     loader: {
@@ -8,8 +9,8 @@ async function build() {
       ".frag": "text",
     },
   });
+
+  console.log("[build] done 🎉");
 }
 
-build().catch(console.error).then(() => {
-  console.log("[build] done 🎉");
-});
+build().catch(console.error)
