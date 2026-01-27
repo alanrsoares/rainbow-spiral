@@ -32,16 +32,23 @@ export class Renderer {
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
 		const uniforms = {
+			// Shared
 			u_resolution: [gl.canvas.width, gl.canvas.height],
 			u_time: time * 0.001,
 			u_mouse: [state.mouse.x, state.mouse.y],
 			u_speed: state.reverse ? -state.speed : state.speed,
-			u_gridPeriod: state.gridPeriod,
-			u_acidIntensity: state.acidIntensity,
-			u_electricity: state.electricity,
 			u_coreGlow: state.coreGlow,
 			u_chromatic: state.chromatic,
 			u_gamma: state.gamma,
+			u_shaderMode: state.shaderMode === "mandelbrot" ? 1 : 0,
+			// Spiral-specific
+			u_gridPeriod: state.gridPeriod,
+			u_acidIntensity: state.acidIntensity,
+			u_electricity: state.electricity,
+			// Mandelbrot-specific
+			u_maxIterations: state.maxIterations,
+			u_zoomCenter: [state.zoomCenterX, state.zoomCenterY],
+			u_colorCycles: state.colorCycles,
 		};
 
 		gl.useProgram(this.programInfo.program);
