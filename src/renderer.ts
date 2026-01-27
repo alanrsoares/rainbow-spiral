@@ -1,6 +1,6 @@
 import * as twgl from "twgl.js";
-import vsSource from "./shaders/shader.vert";
 import fsSource from "./shaders/shader.frag";
+import vsSource from "./shaders/shader.vert";
 import type { State } from "./state";
 
 export class Renderer {
@@ -36,6 +36,12 @@ export class Renderer {
 			u_time: time * 0.001,
 			u_mouse: [state.mouse.x, state.mouse.y],
 			u_speed: state.reverse ? -state.speed : state.speed,
+			u_gridPeriod: state.gridPeriod,
+			u_acidIntensity: state.acidIntensity,
+			u_electricity: state.electricity,
+			u_coreGlow: state.coreGlow,
+			u_chromatic: state.chromatic,
+			u_gamma: state.gamma,
 		};
 
 		gl.useProgram(this.programInfo.program);

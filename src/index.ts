@@ -1,12 +1,17 @@
 import { handleResize, setupCanvas } from "./canvas";
 import { setupInputListeners } from "./input";
 import { Renderer } from "./renderer";
-import { state } from "./state";
+import { state, type VisualSettings } from "./state";
 import { lerp } from "./utils";
 
 declare global {
-	interface Window
-		extends Record<"startApp" | "togglePlay" | "flip", () => void> {}
+	interface Window {
+		startApp: () => void;
+		togglePlay: () => void;
+		flip: () => void;
+		getSettings: () => VisualSettings;
+		updateSettings: (settings: Partial<VisualSettings>) => void;
+	}
 }
 
 window.startApp = () => {
@@ -50,6 +55,21 @@ window.startApp = () => {
 
 	window.flip = () => {
 		state.reverse = !state.reverse;
+	};
+
+	window.getSettings = () => ({
+		speed: state.speed,
+		gridPeriod: state.gridPeriod,
+		acidIntensity: state.acidIntensity,
+		electricity: state.electricity,
+		coreGlow: state.coreGlow,
+		chromatic: state.chromatic,
+		gamma: state.gamma,
+		reverse: state.reverse,
+	});
+
+	window.updateSettings = (settings: Partial<VisualSettings>) => {
+		Object.assign(state, settings);
 	};
 
 	window.requestAnimationFrame(play);
