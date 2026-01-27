@@ -14,6 +14,19 @@
   <body>
     <div id="canvas-container" @click="window.togglePlay()"></div>
 
+    <!-- Shader Mode Selector -->
+    <div x-data="shaderSelector()" class="fixed top-4 left-4 z-50">
+      <select
+        x-model="mode"
+        @change="updateMode($event.target.value)"
+        class="px-4 py-2 bg-black/50 hover:bg-black/70 text-white rounded-lg backdrop-blur-sm border border-white/20 cursor-pointer transition-all duration-300 appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-purple-500"
+        style="background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 0.7rem top 50%; background-size: 0.65rem auto;"
+      >
+        <option value="spiral">Spiral Tunnel</option>
+        <option value="mandelbrot">Mandelbrot Zoom</option>
+      </select>
+    </div>
+
     <!-- Settings Panel -->
     <div x-data="settingsPanel()" x-init="init()" class="fixed top-0 right-0 z-50">
       <!-- Toggle Button -->
@@ -41,10 +54,13 @@
       >
         <div class="p-4 border-b border-white/10">
           <h2 class="text-lg font-semibold">Visual Settings</h2>
-          <p class="text-xs text-gray-400 mt-1">Customize the spiral effect</p>
+          <p class="text-xs text-gray-400 mt-1" x-text="settings.shaderMode === 'spiral' ? 'Customize the spiral effect' : 'Customize the Mandelbrot zoom'"></p>
         </div>
 
         <div class="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+          <!-- ============ SHARED SETTINGS ============ -->
+          <div class="text-xs text-purple-400 font-semibold uppercase tracking-wider">Shared</div>
+
           <!-- Speed -->
           <div class="space-y-2">
             <div class="flex justify-between items-center">
@@ -62,68 +78,17 @@
             />
           </div>
 
-          <!-- Grid Density -->
+          <!-- Core Glow / Boundary Glow -->
           <div class="space-y-2">
             <div class="flex justify-between items-center">
-              <label class="text-sm font-medium">Grid Density</label>
-              <span class="text-xs text-gray-400" x-text="settings.gridPeriod.toFixed(1)"></span>
-            </div>
-            <input
-              type="range"
-              x-model="settings.gridPeriod"
-              @input="updateSetting('gridPeriod', parseFloat($event.target.value))"
-              min="2"
-              max="16"
-              step="0.5"
-              class="w-full accent-purple-500"
-            />
-          </div>
-
-          <!-- Acid Intensity -->
-          <div class="space-y-2">
-            <div class="flex justify-between items-center">
-              <label class="text-sm font-medium">Acid Intensity</label>
-              <span class="text-xs text-gray-400" x-text="settings.acidIntensity.toFixed(2)"></span>
-            </div>
-            <input
-              type="range"
-              x-model="settings.acidIntensity"
-              @input="updateSetting('acidIntensity', parseFloat($event.target.value))"
-              min="0"
-              max="1"
-              step="0.05"
-              class="w-full accent-purple-500"
-            />
-          </div>
-
-          <!-- Electricity -->
-          <div class="space-y-2">
-            <div class="flex justify-between items-center">
-              <label class="text-sm font-medium">Electricity</label>
-              <span class="text-xs text-gray-400" x-text="settings.electricity.toFixed(1)"></span>
-            </div>
-            <input
-              type="range"
-              x-model="settings.electricity"
-              @input="updateSetting('electricity', parseFloat($event.target.value))"
-              min="0"
-              max="5"
-              step="0.1"
-              class="w-full accent-purple-500"
-            />
-          </div>
-
-          <!-- Core Glow -->
-          <div class="space-y-2">
-            <div class="flex justify-between items-center">
-              <label class="text-sm font-medium">Core Glow</label>
+              <label class="text-sm font-medium" x-text="settings.shaderMode === 'spiral' ? 'Core Glow' : 'Boundary Glow'"></label>
               <span class="text-xs text-gray-400" x-text="settings.coreGlow.toFixed(3)"></span>
             </div>
             <input
               type="range"
               x-model="settings.coreGlow"
               @input="updateSetting('coreGlow', parseFloat($event.target.value))"
-              min="0.01"
+              min="0"
               max="0.2"
               step="0.005"
               class="w-full accent-purple-500"
@@ -178,6 +143,139 @@
               ></span>
             </button>
           </div>
+
+          <!-- ============ SPIRAL-SPECIFIC SETTINGS ============ -->
+          <template x-if="settings.shaderMode === 'spiral'">
+            <div class="space-y-4 pt-2 border-t border-white/10">
+              <div class="text-xs text-cyan-400 font-semibold uppercase tracking-wider">Spiral</div>
+
+              <!-- Grid Density -->
+              <div class="space-y-2">
+                <div class="flex justify-between items-center">
+                  <label class="text-sm font-medium">Grid Density</label>
+                  <span class="text-xs text-gray-400" x-text="settings.gridPeriod.toFixed(1)"></span>
+                </div>
+                <input
+                  type="range"
+                  x-model="settings.gridPeriod"
+                  @input="updateSetting('gridPeriod', parseFloat($event.target.value))"
+                  min="2"
+                  max="16"
+                  step="0.5"
+                  class="w-full accent-cyan-500"
+                />
+              </div>
+
+              <!-- Acid Intensity -->
+              <div class="space-y-2">
+                <div class="flex justify-between items-center">
+                  <label class="text-sm font-medium">Acid Intensity</label>
+                  <span class="text-xs text-gray-400" x-text="settings.acidIntensity.toFixed(2)"></span>
+                </div>
+                <input
+                  type="range"
+                  x-model="settings.acidIntensity"
+                  @input="updateSetting('acidIntensity', parseFloat($event.target.value))"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  class="w-full accent-cyan-500"
+                />
+              </div>
+
+              <!-- Electricity -->
+              <div class="space-y-2">
+                <div class="flex justify-between items-center">
+                  <label class="text-sm font-medium">Electricity</label>
+                  <span class="text-xs text-gray-400" x-text="settings.electricity.toFixed(1)"></span>
+                </div>
+                <input
+                  type="range"
+                  x-model="settings.electricity"
+                  @input="updateSetting('electricity', parseFloat($event.target.value))"
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  class="w-full accent-cyan-500"
+                />
+              </div>
+            </div>
+          </template>
+
+          <!-- ============ MANDELBROT-SPECIFIC SETTINGS ============ -->
+          <template x-if="settings.shaderMode === 'mandelbrot'">
+            <div class="space-y-4 pt-2 border-t border-white/10">
+              <div class="text-xs text-orange-400 font-semibold uppercase tracking-wider">Mandelbrot</div>
+
+              <!-- Max Iterations -->
+              <div class="space-y-2">
+                <div class="flex justify-between items-center">
+                  <label class="text-sm font-medium">Max Iterations</label>
+                  <span class="text-xs text-gray-400" x-text="settings.maxIterations"></span>
+                </div>
+                <input
+                  type="range"
+                  x-model="settings.maxIterations"
+                  @input="updateSetting('maxIterations', parseInt($event.target.value))"
+                  min="64"
+                  max="512"
+                  step="32"
+                  class="w-full accent-orange-500"
+                />
+              </div>
+
+              <!-- Color Cycles -->
+              <div class="space-y-2">
+                <div class="flex justify-between items-center">
+                  <label class="text-sm font-medium">Color Cycles</label>
+                  <span class="text-xs text-gray-400" x-text="settings.colorCycles.toFixed(1)"></span>
+                </div>
+                <input
+                  type="range"
+                  x-model="settings.colorCycles"
+                  @input="updateSetting('colorCycles', parseFloat($event.target.value))"
+                  min="0.5"
+                  max="5"
+                  step="0.1"
+                  class="w-full accent-orange-500"
+                />
+              </div>
+
+              <!-- Zoom Center X -->
+              <div class="space-y-2">
+                <div class="flex justify-between items-center">
+                  <label class="text-sm font-medium">Zoom Center X</label>
+                  <span class="text-xs text-gray-400" x-text="settings.zoomCenterX.toFixed(4)"></span>
+                </div>
+                <input
+                  type="range"
+                  x-model="settings.zoomCenterX"
+                  @input="updateSetting('zoomCenterX', parseFloat($event.target.value))"
+                  min="-2"
+                  max="0.5"
+                  step="0.001"
+                  class="w-full accent-orange-500"
+                />
+              </div>
+
+              <!-- Zoom Center Y -->
+              <div class="space-y-2">
+                <div class="flex justify-between items-center">
+                  <label class="text-sm font-medium">Zoom Center Y</label>
+                  <span class="text-xs text-gray-400" x-text="settings.zoomCenterY.toFixed(4)"></span>
+                </div>
+                <input
+                  type="range"
+                  x-model="settings.zoomCenterY"
+                  @input="updateSetting('zoomCenterY', parseFloat($event.target.value))"
+                  min="-1.2"
+                  max="1.2"
+                  step="0.001"
+                  class="w-full accent-orange-500"
+                />
+              </div>
+            </div>
+          </template>
         </div>
 
         <!-- Footer Actions -->
@@ -199,28 +297,57 @@
     </div>
 
     <script type="text/javascript">
+      function shaderSelector() {
+        return {
+          mode: 'spiral',
+          updateMode(value) {
+            this.mode = value;
+            if (window.updateSettings) {
+              window.updateSettings({ shaderMode: value });
+            }
+            // Dispatch custom event for settings panel to listen
+            window.dispatchEvent(new CustomEvent('shader-mode-changed', { detail: value }));
+          }
+        };
+      }
+
       function settingsPanel() {
         return {
           open: false,
           settings: {
+            // Shared
             speed: 0.5,
-            gridPeriod: 8.0,
-            acidIntensity: 0.5,
-            electricity: 2.0,
             coreGlow: 0.04,
             chromatic: 0.005,
             gamma: 1.1,
             reverse: false,
+            shaderMode: 'spiral',
+            // Spiral-specific
+            gridPeriod: 8.0,
+            acidIntensity: 0.5,
+            electricity: 2.0,
+            // Mandelbrot-specific
+            maxIterations: 256,
+            zoomCenterX: -0.745,
+            zoomCenterY: 0.186,
+            colorCycles: 1.0,
           },
           defaults: {
+            // Shared
             speed: 0.5,
-            gridPeriod: 8.0,
-            acidIntensity: 0.5,
-            electricity: 2.0,
             coreGlow: 0.04,
             chromatic: 0.005,
             gamma: 1.1,
             reverse: false,
+            // Spiral-specific
+            gridPeriod: 8.0,
+            acidIntensity: 0.5,
+            electricity: 2.0,
+            // Mandelbrot-specific
+            maxIterations: 256,
+            zoomCenterX: -0.745,
+            zoomCenterY: 0.186,
+            colorCycles: 1.0,
           },
           init() {
             // Sync with app state once it's ready
@@ -228,6 +355,10 @@
               if (window.getSettings) {
                 this.settings = { ...this.settings, ...window.getSettings() };
               }
+            });
+            // Listen for shader mode changes from the dropdown
+            window.addEventListener('shader-mode-changed', (e) => {
+              this.settings.shaderMode = e.detail;
             });
           },
           updateSetting(key, value) {
@@ -243,22 +374,53 @@
             }
           },
           resetDefaults() {
-            this.settings = { ...this.defaults };
+            const currentMode = this.settings.shaderMode;
+            this.settings = { ...this.defaults, shaderMode: currentMode };
             if (window.updateSettings) {
               window.updateSettings(this.settings);
             }
           },
           randomize() {
-            this.settings = {
+            const isSpiral = this.settings.shaderMode === 'spiral';
+
+            // Shared randomization
+            const shared = {
               speed: 0.1 + Math.random() * 1.9,
-              gridPeriod: 2 + Math.random() * 14,
-              acidIntensity: Math.random(),
-              electricity: Math.random() * 5,
-              coreGlow: 0.01 + Math.random() * 0.19,
+              coreGlow: Math.random() * 0.2,
               chromatic: Math.random() * 0.02,
               gamma: 0.5 + Math.random() * 1.5,
               reverse: Math.random() > 0.5,
             };
+
+            if (isSpiral) {
+              this.settings = {
+                ...this.settings,
+                ...shared,
+                gridPeriod: 2 + Math.random() * 14,
+                acidIntensity: Math.random(),
+                electricity: Math.random() * 5,
+              };
+            } else {
+              // Interesting Mandelbrot locations
+              const interestingPoints = [
+                { x: -0.745, y: 0.186 },      // Classic spiral
+                { x: -0.75, y: 0.1 },          // Seahorse valley
+                { x: -0.16, y: 1.0405 },       // Top antenna
+                { x: -1.25066, y: 0.02012 },   // Elephant valley
+                { x: -0.235125, y: 0.827215 }, // Double spiral
+              ];
+              const point = interestingPoints[Math.floor(Math.random() * interestingPoints.length)];
+
+              this.settings = {
+                ...this.settings,
+                ...shared,
+                maxIterations: 64 + Math.floor(Math.random() * 14) * 32,
+                zoomCenterX: point.x + (Math.random() - 0.5) * 0.01,
+                zoomCenterY: point.y + (Math.random() - 0.5) * 0.01,
+                colorCycles: 0.5 + Math.random() * 4.5,
+              };
+            }
+
             if (window.updateSettings) {
               window.updateSettings(this.settings);
             }
